@@ -4,7 +4,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChatDemo } from "@/components/shared/chat-demo";
 import { ProductCard } from "@/components/shared/product-card";
-import { mockCategories, mockProducts } from "@/lib/mock-products";
+import { formatCategory } from "@/lib/format";
+import {
+  getGiftPicks,
+  getTopCategories,
+  getTopRatedProducts,
+} from "@/lib/queries/products";
+
+export const revalidate = 3600;
 
 const assistantPoints = [
   {
@@ -21,7 +28,13 @@ const assistantPoints = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const [categories, topRated, giftPicks] = await Promise.all([
+    getTopCategories(6),
+    getTopRatedProducts(4),
+    getGiftPicks(3),
+  ]);
+
   return (
     <>
       {/* Hero */}
@@ -48,7 +61,7 @@ export default function LandingPage() {
         </div>
 
         <div className="flex lg:justify-end">
-          <ChatDemo />
+          <ChatDemo picks={giftPicks} />
         </div>
       </section>
 
@@ -57,8 +70,8 @@ export default function LandingPage() {
         <h2 className="font-heading text-3xl font-bold tracking-tight">
           Shop by category
         </h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {mockCategories.map((c) => (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map((c) => (
             <Link
               key={c.slug}
               href={`/search?category=${c.slug}`}
@@ -66,7 +79,12 @@ export default function LandingPage() {
             >
               <Card className="transition-colors group-hover:bg-muted">
                 <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="font-heading text-2xl">{c.name}</CardTitle>
+                  <div>
+                    <CardTitle className="font-heading text-xl">
+                      {formatCategory(c.slug)}
+                    </CardTitle>
+                    <CardDescription>{c.count} products</CardDescription>
+                  </div>
                   <ArrowRight className="size-5 text-muted-foreground" aria-hidden />
                 </CardHeader>
               </Card>
@@ -75,10 +93,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Latest products */}
+      {/* Top rated */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="flex items-end justify-between gap-4">
-          <h2 className="font-heading text-3xl font-bold tracking-tight">Just added</h2>
+          <h2 className="font-heading text-3xl font-bold tracking-tight">Top rated</h2>
           <Link
             href="/search"
             className="text-sm font-medium underline-offset-4 hover:underline"
@@ -87,7 +105,7 @@ export default function LandingPage() {
           </Link>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {mockProducts.slice(3, 7).map((p) => (
+          {topRated.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>

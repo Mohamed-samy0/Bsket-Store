@@ -1,21 +1,25 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice } from "@/lib/format";
-import type { Product } from "@/lib/mock-products";
-import Image from "next/image";
+import { formatCategory, formatPrice } from "@/lib/format";
+import type { StoreProduct } from "@/lib/queries/products";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product }: { product: StoreProduct }) {
+  const image = product.images[0];
+
   return (
     <Link href={`/product/${product.slug}`} className="group block h-full">
       <Card className="h-full gap-0 overflow-hidden py-0">
         <div className="relative aspect-square bg-secondary">
-          {product.image ? (
+          {image ? (
             <Image
-              src={product.image}
+              src={image}
               alt={product.name}
-              className="size-full object-cover"
+              fill
+              sizes="(min-width: 768px) 25vw, 50vw"
+              className="object-cover"
             />
           ) : (
             <span
@@ -28,8 +32,8 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
 
         <CardContent className="space-y-2 p-4">
-          <Badge variant="secondary">{product.category}</Badge>
-          <h3 className="font-medium leading-snug group-hover:underline">
+          <Badge variant="secondary">{formatCategory(product.category)}</Badge>
+          <h3 className="line-clamp-2 font-medium leading-snug group-hover:underline">
             {product.name}
           </h3>
           <div className="flex items-center justify-between text-sm">
