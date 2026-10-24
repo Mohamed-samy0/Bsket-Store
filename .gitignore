@@ -42,4 +42,4 @@ next-env.d.ts
 .neon
 .agents/
 skills-lock.json
-/generated
+/src/generated/prisma/
