@@ -1,4 +1,8 @@
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "../prisma";
+import { SearchParams } from "../validators";
+
+export const PAGE_SIZE = 12;
 
 type DbProduct = NonNullable<Awaited<ReturnType<typeof prisma.product.findFirst>>>;
 
@@ -56,4 +60,62 @@ export async function getTopCategories(limit = 6) {
     .map((g) => ({ slug: g.category, count: g._count._all }))
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
+}
+
+const orderByMap: Record<SearchParams["sort"], Prisma.ProductOrderByWithRelationInput[]> =
+  {
+    rating: [{ rating: "desc" }, { numReviews: "desc" }, { id: "asc" }],
+    newest: [{ createdAt: "desc" }, { id: "asc" }],
+    "price-asc": [{ price: "asc" }, { id: "asc" }],
+    "price-desc": [{ price: "desc" }, { id: "asc" }],
+  };
+
+export async function getProducts({
+  q,
+  category,
+  price,
+  rating,
+  sort,
+  page,
+}: SearchParams) {
+  const [minPrice, maxPrice] = price ? price.split("-").map(Number) : [];
+  const where: Prisma.ProductWhereInput = {
+    ...(category && { category }),
+    ...(price && { price: { gte: minPrice, lte: maxPrice } }),
+    ...(rating && { rating: { gte: rating } }),
+    ...(q && {
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { brand: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+      ],
+    }),
+  };
+
+  const total = await prisma.product.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const products = await prisma.product.findMany({
+    where,
+    orderBy: orderByMap[sort],
+    skip: (currentPage - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
+
+  return {
+    products: products.map(toStoreProduct),
+    total,
+    totalPages,
+    page: currentPage,
+  };
+}
+
+export async function getAllCategories() {
+  const groups = await prisma.product.groupBy({
+    by: ["category"],
+    _count: { _all: true },
+    orderBy: { category: "asc" },
+  });
+  return groups.map((g) => ({ slug: g.category, count: g._count._all }));
 }
