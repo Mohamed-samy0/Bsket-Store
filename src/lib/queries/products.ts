@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "../prisma";
 import { SearchParams } from "../validators";
+import { cache } from "react";
 
 export const PAGE_SIZE = 12;
 
@@ -12,6 +13,7 @@ export type StoreProduct = {
   name: string;
   category: string;
   brand: string | null;
+  description: string;
   price: number;
   rating: number;
   numReviews: number;
@@ -26,6 +28,7 @@ function toStoreProduct(p: DbProduct): StoreProduct {
     name: p.name,
     category: p.category,
     brand: p.brand,
+    description: p.description,
     price: Number(p.price),
     rating: Number(p.rating),
     numReviews: p.numReviews,
@@ -33,7 +36,6 @@ function toStoreProduct(p: DbProduct): StoreProduct {
     images: p.images,
   };
 }
-
 export async function getTopRatedProducts(limit = 4) {
   const products = await prisma.product.findMany({
     orderBy: [{ rating: "desc" }, { numReviews: "desc" }],
@@ -119,3 +121,8 @@ export async function getAllCategories() {
   });
   return groups.map((g) => ({ slug: g.category, count: g._count._all }));
 }
+
+export const getProductBySlug = cache(async (slug: string) => {
+  const product = await prisma.product.findUnique({ where: { slug } });
+  return product ? toStoreProduct(product) : null;
+});
